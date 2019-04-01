@@ -4,7 +4,7 @@
 
 开发环境：FFmpeg3.4.2 、qt5.9、C++ 
 
-文件夹名称      demo实例
+文件夹名称                       demo实例
 
-testDemux       初始化解封装使用avformat_open_input
+testDemux                        ffmpeg解封装
 
