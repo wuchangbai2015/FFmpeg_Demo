@@ -1,11 +1,22 @@
-
 #include <iostream>
+#include <thread>
+
 extern "C" {
 	#include "libavformat/avformat.h"
 }
 using namespace std;
+
 #pragma comment(lib,"avformat.lib")
 #pragma comment(lib,"avutil.lib")
+#pragma comment(lib,"avcodec.lib")
+
+void XSleep(int ms)
+{
+	//c++ 11
+	chrono::milliseconds du(ms);
+	this_thread::sleep_for(du);
+}
+
 static double r2d(AVRational r)
 {
 	return r.den == 0 ? 0 : (double)r.num / (double)r.den;
@@ -97,6 +108,50 @@ int main(int argc, char *argv[])
 	//②获取视频流 函数获取
 	videoStream = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 	///ic->streams[videoStream]
+
+	//malloc AVPacket并初始化
+	AVPacket *pkt = av_packet_alloc();
+	for (;;)
+	{
+		int re = av_read_frame(ic, pkt);
+		if (re != 0)
+		{
+			//循环播放
+			cout << "==============================end==============================" << endl;
+			int ms = 3000; //三秒位置 根据时间基数（分数）转换
+			long long pos = (double)ms / (double)1000 * r2d(ic->streams[pkt->stream_index]->time_base);
+			av_seek_frame(ic, videoStream, pos, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+			continue;
+		}
+		cout << "pkt->size = " << pkt->size << endl;
+		//显示的时间
+		cout << "pkt->pts = " << pkt->pts << endl;
+
+		//转换为毫秒，方便做同步
+		cout << "pkt->pts ms = " << pkt->pts * (r2d(ic->streams[pkt->stream_index]->time_base) * 1000) << endl;
+
+
+
+		//解码时间
+		cout << "pkt->dts = " << pkt->dts << endl;
+		if (pkt->stream_index == videoStream)
+		{
+			cout << "图像" << endl;
+		}
+		if (pkt->stream_index == audioStream)
+		{
+			cout << "音频" << endl;
+		}
+
+
+		//释放，引用计数-1 为0释放空间
+		av_packet_unref(pkt);
+
+		//XSleep(500);
+	}
+
+	av_packet_free(&pkt);
+
 
 
 	if (ic)
